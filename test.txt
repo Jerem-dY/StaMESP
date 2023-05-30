@@ -1,0 +1,48 @@
+# Ceci est un fichier de règles pour la tokenisation du français.
+# . l'état actuel
+# @ les tokens qui ne sont pas dans les sets mentionnées
+# ^ n'écrit pas (^. reste sur place et n'écrit pas, ^state n'écrit pas et change d'état)
+# % écrit avant de changer d'état (concaténation)
+# : état final
+# * état initial
+
+
+
+wpunc(',' ';' ':' '“' '”' '"' '«' '»' "bla \" tritri \' tu \\")
+spunc('.' '?' '!')
+sep(' ' '\n' '\t')
+apos("'" '’')
+
+# La ponctuation forte
+PoncForte:{
+	sep = ^Sep
+	wpunc = PoncFaible
+	spunc = .
+	@ = Fo
+}
+
+# La ponctuation faible
+PoncFaible:{
+	sep = ^Sep
+	wpunc = PoncFaible
+	spunc = PoncForte
+	@ = Fo
+}
+
+# Les caractères formant les mots
+Fo:{
+	sep = ^Sep
+	wpunc = PoncFaible
+	spunc = PoncForte
+	apos = %Fo
+	@ = .
+}
+
+
+# Les séparateurs
+Sep:*{
+	sep = ^.
+	wpunc = PoncFaible
+	spunc = PoncForte
+	@ = Fo
+}
