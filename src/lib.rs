@@ -15,7 +15,11 @@ mod tests {
         let scan = Scanner::new(input.as_str(), "test.txt");
 
         for tok in scan {
-            println!("{}", tok);
+            match tok {
+                Err(e) => println!("{}", e),
+                Ok(val) => println!("{}", val)
+            }
+            
         }
     }
 }

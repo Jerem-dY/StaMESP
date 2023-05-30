@@ -1,7 +1,28 @@
-use std::str::Chars;
+use std::{str::Chars, error::Error};
 
 use std::fmt::Display;
 use serde::{Serialize, Deserialize};
+
+#[derive(Debug)]
+pub enum ScannerError{
+    UnfinishedLitteral(Pos, String),
+    UnknownEscape(Pos, String),
+    UnknownToken(Pos, String)
+}
+
+impl Error for ScannerError {}
+
+impl Display for ScannerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+
+        match self {
+            ScannerError::UnfinishedLitteral(loc, delimiter) => writeln!(f, "{}: Unfinished string litteral with delimiter '{}'", loc, delimiter),
+            ScannerError::UnknownEscape(loc, escaped) => writeln!(f, "{}: Unknown escaped character '\\{}'", loc, escaped),
+            ScannerError::UnknownToken(loc, token) => writeln!(f, "{}: Undefined token '{}'", loc, token),
+        }
+        
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pos {
@@ -32,7 +53,7 @@ pub enum Token {
     At(Pos),
     Dot(Pos),
     Pipe(Pos),
-    Other
+    Error
 
 }
 
@@ -53,7 +74,7 @@ impl Display for Token {
             Token::At(a) => write!(f, "{} @", a),
             Token::Dot(a) => write!(f, "{} .", a),
             Token::Pipe(a) => write!(f, "{} |", a),
-            Token::Other => write!(f, "OTHER")
+            Token::Error => write!(f, "ERROR")
         }
     }
 }
@@ -82,11 +103,11 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Token;
+    type Item = Result<Token, ScannerError>;
 
     fn next(&mut self) -> Option<Self::Item> {
 
-        let mut output: Option<Token> = None; 
+        let mut output: Option<Result<Token, ScannerError>> = None; 
 
         if let Some(mut c) = self.chars.next() {
 
@@ -117,7 +138,7 @@ impl<'a> Iterator for Scanner<'a> {
                     self.loc.line += 1;
                     self.loc.column = 1;
 
-                    Some(Token::Comment(location, buffer))
+                    Some(Ok(Token::Comment(location, buffer)))
                 },
                 c if c.is_alphanumeric() => {
 
@@ -131,7 +152,7 @@ impl<'a> Iterator for Scanner<'a> {
 
                     self.loc.column += 1;
 
-                    Some(Token::Identifier(location, buffer))
+                    Some(Ok(Token::Identifier(location, buffer)))
                 },
                 '\'' | '"' => {
                     let mut buffer = String::new();
@@ -142,7 +163,17 @@ impl<'a> Iterator for Scanner<'a> {
                     while let Some(n) = self.chars.by_ref().next() {
 
                         if escaped {
-                            buffer.push(n);
+
+                            match n {
+                                'n' => buffer.push('\n'),
+                                't' => buffer.push('\t'),
+                                'r' => buffer.push('\r'),
+                                '\\' => buffer.push('\\'),
+                                '"' => buffer.push('"'),
+                                '\'' => buffer.push('\''),
+                                _ => return Some(Err(ScannerError::UnknownEscape(location, n.to_string())))
+                            }
+
                             escaped = false;
                         }
                         else if n == c {
@@ -160,27 +191,26 @@ impl<'a> Iterator for Scanner<'a> {
                     }
 
                     if !closed {
-                        panic!();
+                        return Some(Err(ScannerError::UnfinishedLitteral(location, c.to_string())))
                     }
 
                     self.loc.column += 1;
                     
-                    Some(Token::Litteral(location, buffer))
+                    Some(Ok(Token::Litteral(location, buffer)))
                 },
-                '{' => Some(Token::OpenBrackets(self.loc.clone())),
-                '}' => Some(Token::CloseBrackets(self.loc.clone())),
-                '(' => Some(Token::OpenParen(self.loc.clone())),
-                ')' => Some(Token::CloseParen(self.loc.clone())),
-                '=' => Some(Token::Equal(self.loc.clone())),
-                '*' => Some(Token::Star(self.loc.clone())),
-                ':' => Some(Token::Colon(self.loc.clone())),
-                '^' => Some(Token::Hat(self.loc.clone())),
-                '@' => Some(Token::At(self.loc.clone())),
-                '.' => Some(Token::Dot(self.loc.clone())),
-                '|' => Some(Token::Pipe(self.loc.clone())),
+                '{' => Some(Ok(Token::OpenBrackets(self.loc.clone()))),
+                '}' => Some(Ok(Token::CloseBrackets(self.loc.clone()))),
+                '(' => Some(Ok(Token::OpenParen(self.loc.clone()))),
+                ')' => Some(Ok(Token::CloseParen(self.loc.clone()))),
+                '=' => Some(Ok(Token::Equal(self.loc.clone()))),
+                '*' => Some(Ok(Token::Star(self.loc.clone()))),
+                ':' => Some(Ok(Token::Colon(self.loc.clone()))),
+                '^' => Some(Ok(Token::Hat(self.loc.clone()))),
+                '@' => Some(Ok(Token::At(self.loc.clone()))),
+                '.' => Some(Ok(Token::Dot(self.loc.clone()))),
+                '|' => Some(Ok(Token::Pipe(self.loc.clone()))),
                 _ =>  {
-                    println!("{c:?}");
-                    Some(Token::Other)
+                    Some(Err(ScannerError::UnknownToken(self.loc.clone(), c.to_string())))
                 }
             };
     
