@@ -16,9 +16,9 @@ impl Display for ScannerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 
         match self {
-            ScannerError::UnfinishedLitteral(loc, delimiter) => writeln!(f, "{}: Unfinished string litteral with delimiter '{}'", loc, delimiter),
-            ScannerError::UnknownEscape(loc, escaped) => writeln!(f, "{}: Unknown escaped character '\\{}'", loc, escaped),
-            ScannerError::UnknownToken(loc, token) => writeln!(f, "{}: Undefined token '{}'", loc, token),
+            ScannerError::UnfinishedLitteral(loc, delimiter) => writeln!(f, "{}Unfinished string litteral with delimiter '{}'", loc, delimiter),
+            ScannerError::UnknownEscape(loc, escaped) => writeln!(f, "{}Unknown escaped character '\\{}'", loc, escaped),
+            ScannerError::UnknownToken(loc, token) => writeln!(f, "{}Undefined token '{}'", loc, token),
         }
         
     }
@@ -53,6 +53,7 @@ pub enum Token {
     At(Pos),
     Dot(Pos),
     Pipe(Pos),
+    Percent(Pos),
     Error
 
 }
@@ -74,6 +75,7 @@ impl Display for Token {
             Token::At(a) => write!(f, "{} @", a),
             Token::Dot(a) => write!(f, "{} .", a),
             Token::Pipe(a) => write!(f, "{} |", a),
+            Token::Percent(a) => write!(f, "{} %", a),
             Token::Error => write!(f, "ERROR")
         }
     }
@@ -209,6 +211,7 @@ impl<'a> Iterator for Scanner<'a> {
                 '@' => Some(Ok(Token::At(self.loc.clone()))),
                 '.' => Some(Ok(Token::Dot(self.loc.clone()))),
                 '|' => Some(Ok(Token::Pipe(self.loc.clone()))),
+                '%' => Some(Ok(Token::Percent(self.loc.clone()))),
                 _ =>  {
                     Some(Err(ScannerError::UnknownToken(self.loc.clone(), c.to_string())))
                 }
