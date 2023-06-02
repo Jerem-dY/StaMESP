@@ -1,11 +1,15 @@
 mod scanner;
+mod parser;
 
-use scanner::*;
+use parser::*;
 use std::fs;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::parser::Symbols;
+
+    use super::scanner::*;
+    use std::fs;
 
     #[test]
     fn it_works() {
@@ -14,12 +18,18 @@ mod tests {
 
         let scan = Scanner::new(input.as_str(), "test.txt");
 
-        for tok in scan {
+        for tok in scan.clone() {
             match tok {
                 Err(e) => println!("{}", e),
                 Ok(val) => println!("{}", val)
             }
             
         }
+
+        let sym = Symbols::parser(scan, true);
+
+        
+
+        
     }
 }

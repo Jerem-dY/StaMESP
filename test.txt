@@ -8,41 +8,41 @@
 
 
 
-wpunc(',' ';' ':' '“' '”' '"' '«' '»' "bla \" tritri \' tu \\ \n \n")
-spunc('.' '?' '!')
-sep(' ' '\n' '\t')
-apos("'" '’')
+sep(' ' '\n' '\t');
+apos("'" '’');
 
 # La ponctuation forte
-PoncForte:{
-	sep = ^Sep
-	wpunc = PoncFaible
-	spunc = .
-	@ = Fo
-}
+PoncForte:('.' '?' '!'){
+	sep = ^Sep;
+	PoncFaible = PoncFaible;
+	PoncForte = .;
+	@ = Fo;
+};
 
 # La ponctuation faible
-PoncFaible:{
-	sep = ^Sep
-	wpunc = PoncFaible
-	spunc = PoncForte
-	@ = Fo
-}
+PoncFaible:(',' ';' ':' '“' '”' '"' '«' '»' "bla \" tritri \' tu \\ \n \n"){
+	sep = ^Sep;
+	PoncFaible = PoncFaible;
+	PoncForte = PoncForte;
+	@ = Fo;
+};
 
 # Les caractères formant les mots
 Fo:{
-	sep = ^Sep
-	wpunc = PoncFaible
-	spunc = PoncForte
-	apos = %Fo
-	@ = .
-}
+	sep = ^Sep;
+	PoncFaible = PoncFaible;
+	PoncForte = PoncForte;
+	apos = %Fo;
+	@ = .;
+};
+
+PoncFaible('a');
 
 
 # Les séparateurs
 Sep:*{
-	sep = ^.
-	wpunc = PoncFaible
-	spunc = PoncForte
-	@ = Fo
-}
+	sep = ^.;
+	wpunc = PoncFaible;
+	PoncForte = PoncForte;
+	@ = Fo;
+};

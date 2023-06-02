@@ -1,3 +1,4 @@
+use std::iter::Peekable;
 use std::{str::Chars, error::Error};
 
 use std::fmt::Display;
@@ -33,11 +34,11 @@ pub struct Pos {
 
 impl Display for Pos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{:0>3}:{:0>3} -->\t", self.file, self.line, self.column)
+        write!(f, "{}:{:0>3}:{:0>3} --> ", self.file, self.line, self.column)
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Token {
     Comment(Pos, String),
     OpenParen(Pos),
@@ -54,6 +55,7 @@ pub enum Token {
     Dot(Pos),
     Pipe(Pos),
     Percent(Pos),
+    SemiColon(Pos),
     Error
 
 }
@@ -76,14 +78,15 @@ impl Display for Token {
             Token::Dot(a) => write!(f, "{} .", a),
             Token::Pipe(a) => write!(f, "{} |", a),
             Token::Percent(a) => write!(f, "{} %", a),
+            Token::SemiColon(a) => write!(f, "{} ;", a),
             Token::Error => write!(f, "ERROR")
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scanner<'a> {
-    chars: Chars<'a>,
+    chars: Peekable<Chars<'a>>,
     loc: Pos
 }
 
@@ -94,7 +97,7 @@ impl<'a> Scanner<'a> {
     pub fn new(s: &'a str, filename: &'a str) -> Self {
 
         Self {
-            chars: s.chars(),
+            chars: s.chars().peekable(),
             loc: Pos{
                 file: filename.to_string(),
                 column: 1,
@@ -134,11 +137,11 @@ impl<'a> Iterator for Scanner<'a> {
 
                     for n in self.chars.by_ref().take_while(|x| x != &'\n') {
                         buffer.push(n);
-                        self.loc.column += 1;
+                        //self.loc.column += 1;
                     }
 
                     self.loc.line += 1;
-                    self.loc.column = 1;
+                    self.loc.column = 0;
 
                     Some(Ok(Token::Comment(location, buffer)))
                 },
@@ -147,12 +150,12 @@ impl<'a> Iterator for Scanner<'a> {
                     let mut buffer = String::from(c);
                     let location = self.loc.clone();
 
-                    for n in self.chars.by_ref().take_while(|x| x.is_alphanumeric()) {
+                    while let Some(n) = self.chars.by_ref().next_if(|x| x.is_alphanumeric()) {
                         buffer.push(n);
                         self.loc.column += 1;
                     }
 
-                    self.loc.column += 1;
+                    // Reserved words check could go here
 
                     Some(Ok(Token::Identifier(location, buffer)))
                 },
@@ -180,7 +183,7 @@ impl<'a> Iterator for Scanner<'a> {
                         }
                         else if n == c {
                             closed = true;
-                            self.loc.column += 1;
+                            //self.loc.column += 1;
                             break;
                         }
                         else if n == '\\' {
@@ -212,6 +215,7 @@ impl<'a> Iterator for Scanner<'a> {
                 '.' => Some(Ok(Token::Dot(self.loc.clone()))),
                 '|' => Some(Ok(Token::Pipe(self.loc.clone()))),
                 '%' => Some(Ok(Token::Percent(self.loc.clone()))),
+                ';' => Some(Ok(Token::SemiColon(self.loc.clone()))),
                 _ =>  {
                     Some(Err(ScannerError::UnknownToken(self.loc.clone(), c.to_string())))
                 }
